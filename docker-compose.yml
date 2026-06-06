@@ -1,0 +1,157 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: void-mongo
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.runCommand({ ping: 1 }).ok']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: void-user
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      - PORT=3001
+      - MONGO_URI=mongodb://mongo:27017/void-users
+      - JWT_SECRET=${JWT_SECRET:-change_this_to_a_random_secret_key}
+      - JWT_EXPIRES_IN=7d
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  product-service:
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
+    container_name: void-product
+    restart: unless-stopped
+    ports:
+      - '3002:3002'
+    environment:
+      - PORT=3002
+      - MONGO_URI=mongodb://mongo:27017/void-products
+      - JWT_SECRET=${JWT_SECRET:-change_this_to_a_random_secret_key}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  cart-service:
+    build:
+      context: .
+      dockerfile: cart-service/Dockerfile
+    container_name: void-cart
+    restart: unless-stopped
+    ports:
+      - '3003:3003'
+    environment:
+      - PORT=3003
+      - MONGO_URI=mongodb://mongo:27017/void-carts
+      - JWT_SECRET=${JWT_SECRET:-change_this_to_a_random_secret_key}
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+    depends_on:
+      mongo:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    container_name: void-order
+    restart: unless-stopped
+    ports:
+      - '3004:3004'
+    environment:
+      - PORT=3004
+      - MONGO_URI=mongodb://mongo:27017/void-orders
+      - JWT_SECRET=${JWT_SECRET:-change_this_to_a_random_secret_key}
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+      - CART_SERVICE_URL=http://cart-service:3003
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      mongo:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+      cart-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    container_name: void-payment
+    restart: unless-stopped
+    ports:
+      - '3005:3005'
+    environment:
+      - PORT=3005
+      - MONGO_URI=mongodb://mongo:27017/void-payments
+      - JWT_SECRET=${JWT_SECRET:-change_this_to_a_random_secret_key}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - ORDER_SERVICE_URL=http://order-service:3004
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+      # NOTE: payment-service calls order-service only via async Stripe webhooks,
+      # so it does not need to wait for the order-service to be up.
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    container_name: void-gateway
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    environment:
+      - PORT=5000
+      - JWT_SECRET=${JWT_SECRET:-change_this_to_a_random_secret_key}
+      - USER_SERVICE_URL=http://user-service:3001
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+      - CART_SERVICE_URL=http://cart-service:3003
+      - ORDER_SERVICE_URL=http://order-service:3004
+      - PAYMENT_SERVICE_URL=http://payment-service:3005
+    depends_on:
+      user-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      cart-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: void-rabbitmq
+    restart: unless-stopped
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+
+volumes:
+  mongo_data:

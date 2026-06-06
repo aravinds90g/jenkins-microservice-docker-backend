@@ -1,0 +1,27 @@
+{
+  "name": "void-tech-ecommerce-backend",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix gateway install && npm --prefix user-service install && npm --prefix product-service install && npm --prefix cart-service install && npm --prefix order-service install && npm --prefix payment-service install",
+    "dev:gateway": "npm --prefix gateway run dev",
+    "dev:user": "npm --prefix user-service run dev",
+    "dev:product": "npm --prefix product-service run dev",
+    "dev:cart": "npm --prefix cart-service run dev",
+    "dev:order": "npm --prefix order-service run dev",
+    "dev:payment": "npm --prefix payment-service run dev",
+    "dev": "concurrently \"npm run dev:gateway\" \"npm run dev:user\" \"npm run dev:product\" \"npm run dev:cart\" \"npm run dev:order\" \"npm run dev:payment\"",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "axios": "^1.16.1",
+    "concurrently": "^9.1.2",
+    "express-http-proxy": "^2.1.2",
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
+  }
+}
