@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'node20'
+    }
+
     environment {
         JWT_SECRET           = credentials('jwt-secret')
         STRIPE_SECRET_KEY    = credentials('stripe-secret-key')
@@ -11,6 +15,13 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Node Setup') {
+            steps {
+                sh 'node -v'
+                sh 'npm -v'
             }
         }
 
