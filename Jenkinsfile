@@ -12,18 +12,7 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
-        stage('Node Setup') {
-            steps {
-                sh 'node -v'
-                sh 'npm -v'
-            }
-        }
+       
 
         stage('Install Dependencies') {
             steps {
