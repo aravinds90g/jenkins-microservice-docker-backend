@@ -2,6 +2,7 @@ const Order = require('../models/Order');
 const axios = require('axios');
 const { publishEvent } = require('../../../shared/rabbitmq');
 
+const PAYMENT_SERVICE_URL = process.env.PAYMENT_SERVICE_URL || 'http://localhost:3005';
 const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL || 'http://localhost:3002';
 const CART_SERVICE_URL = process.env.CART_SERVICE_URL || 'http://localhost:3003';
 
@@ -56,6 +57,22 @@ exports.createOrder = async (req, res) => {
       items: items.map((i) => ({ productId: i.productId, name: i.name, price: i.price, quantity: i.quantity })),
     }).catch((e) => console.error('Failed to publish order-created event:', e.message));
 
+    const { data: paymentData } = await axios.post(`${PAYMENT_SERVICE_URL}/api/payments/create-intent`, {
+      orderId: order._id.toString(),
+      amount: total,
+      currency: 'inr',
+    }, {
+      headers: { Authorization: req.headers.authorization },
+      timeout: 10000,
+    }).catch((e) => {
+      return { data: { paymentIntentId: null, clientSecret: null, error: e.message } };
+    });
+
+    if (paymentData.paymentIntentId) {
+      order.paymentIntentId = paymentData.paymentIntentId;
+      await order.save();
+    }
+
     // Decrement stock BEFORE clearing the cart. If stock is insufficient or the
     // product service is down, we abort and the cart stays intact so the user
     // can retry. Previously, the cart was cleared first, leaving the user with
@@ -79,7 +96,7 @@ exports.createOrder = async (req, res) => {
       timeout: 5000,
     }).catch((e) => console.error('Failed to clear cart after order:', e.message));
 
-    res.status(201).json({ order });
+    res.status(201).json({ order, clientSecret: paymentData.clientSecret, mocked: !!paymentData.mocked });
   } catch (err) {
     if (err.response) {
       return res.status(err.response.status).json({ error: err.response.data.error || err.message });
