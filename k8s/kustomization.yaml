@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: void-backend
+
+resources:
+  - namespace.yaml
+  - config.yaml
+  - secret.yaml
+  - mongo.yaml
+  - rabbitmq.yaml
+  - user-service.yaml
+  - product-service.yaml
+  - cart-service.yaml
+  - order-service.yaml
+  - payment-service.yaml
+  - gateway.yaml
+  - ingress.yaml

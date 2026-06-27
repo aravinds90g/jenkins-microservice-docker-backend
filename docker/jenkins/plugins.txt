@@ -1,0 +1,8 @@
+blueocean:latest
+docker-workflow:latest
+kubernetes:latest
+kubernetes-cli:latest
+git:latest
+pipeline-github-lib:latest
+credentials-binding:latest
+nodejs:latest

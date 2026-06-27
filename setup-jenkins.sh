@@ -25,6 +25,7 @@ check_command() {
 
 check_command docker
 check_command git
+check_command kubectl
 
 docker version --format '{{.Server.Version}}' &>/dev/null || {
     echo "ERROR: Docker daemon is not running. Start it with: sudo systemctl start docker"
@@ -86,7 +87,11 @@ echo "  5. Add credentials (see README or Jenkinsfile for details):"
 echo "     - jwt-secret        (Secret text)"
 echo "     - stripe-secret-key (Secret text)"
 echo "     - stripe-webhook-secret (Secret text)"
-echo "  6. Create a new Pipeline job:"
+echo "  6. Ensure Minikube is running:  ./minikube-start.sh"
+echo "  7. Jenkins needs the Minikube kubeconfig to deploy:"
+echo "     docker exec \$JENKINS_CONTAINER mkdir -p /var/jenkins_home/.kube"
+echo "     docker cp ~/.kube/config \$JENKINS_CONTAINER:/var/jenkins_home/.kube/config"
+echo "  8. Create a new Pipeline job:"
 echo "     - Pipeline from SCM → Git → your GitHub repo URL"
 echo "     - Script Path: Jenkinsfile"
 echo ""

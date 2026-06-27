@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart-service
+  namespace: void-backend
+spec:
+  selector:
+    app: cart-service
+  ports:
+    - port: 3003
+      targetPort: 3003
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart-service
+  namespace: void-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cart-service
+  template:
+    metadata:
+      labels:
+        app: cart-service
+    spec:
+      containers:
+        - name: cart-service
+          image: void-cart-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3003
+          env:
+            - name: PORT
+              value: "3003"
+            - name: MONGO_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: void-config
+                  key: MONGO_URI_CART
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: void-secret
+                  key: JWT_SECRET
+            - name: PRODUCT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: void-config
+                  key: PRODUCT_SERVICE_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            initialDelaySeconds: 15
+            periodSeconds: 20
