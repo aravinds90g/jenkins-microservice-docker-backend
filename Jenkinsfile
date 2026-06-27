@@ -65,11 +65,12 @@ pipeline {
         }
 
         stage('Push Images') {
-            when {
-                expression { return env.DOCKER_REGISTRY != '' }
-            }
             steps {
                 script {
+                    if (!env.DOCKER_REGISTRY?.trim()) {
+                        echo 'No DOCKER_REGISTRY set — skipping push'
+                        return
+                    }
                     def registry = env.DOCKER_REGISTRY
                     def tag = env.BUILD_TAG
                     def services = [
