@@ -47,8 +47,8 @@ pipeline {
                         'payment-service'
                     ]
 
-                    def registry = DOCKER_REGISTRY ? "${DOCKER_REGISTRY}/" : ''
-                    def tag = BUILD_TAG
+                    def registry = env.DOCKER_REGISTRY ? "${env.DOCKER_REGISTRY}/" : ''
+                    def tag = env.BUILD_TAG
 
                     services.each { service ->
                         def imageName = "void-${service}"
@@ -66,11 +66,12 @@ pipeline {
 
         stage('Push Images') {
             when {
-                expression { return DOCKER_REGISTRY != '' }
+                expression { return env.DOCKER_REGISTRY != '' }
             }
             steps {
                 script {
-                    def registry = DOCKER_REGISTRY
+                    def registry = env.DOCKER_REGISTRY
+                    def tag = env.BUILD_TAG
                     def services = [
                         'gateway',
                         'user-service',
@@ -82,7 +83,7 @@ pipeline {
 
                     services.each { service ->
                         def imageName = "void-${service}"
-                        sh "docker push ${registry}/${imageName}:${BUILD_TAG}"
+                        sh "docker push ${registry}/${imageName}:${tag}"
                         sh "docker push ${registry}/${imageName}:latest"
                     }
                 }
@@ -104,17 +105,20 @@ pipeline {
         stage('Deploy to Minikube') {
             steps {
                 script {
-                    if (DOCKER_REGISTRY) {
+                    if (env.DOCKER_REGISTRY) {
+                        def ns = env.K8S_NAMESPACE
+                        def tag = env.BUILD_TAG
+                        def reg = env.DOCKER_REGISTRY
                         sh """
-                            kubectl set image -n ${K8S_NAMESPACE} deployment/gateway          gateway=${DOCKER_REGISTRY}/void-gateway:${BUILD_TAG}
-                            kubectl set image -n ${K8S_NAMESPACE} deployment/user-service     user-service=${DOCKER_REGISTRY}/void-user-service:${BUILD_TAG}
-                            kubectl set image -n ${K8S_NAMESPACE} deployment/product-service  product-service=${DOCKER_REGISTRY}/void-product-service:${BUILD_TAG}
-                            kubectl set image -n ${K8S_NAMESPACE} deployment/cart-service     cart-service=${DOCKER_REGISTRY}/void-cart-service:${BUILD_TAG}
-                            kubectl set image -n ${K8S_NAMESPACE} deployment/order-service    order-service=${DOCKER_REGISTRY}/void-order-service:${BUILD_TAG}
-                            kubectl set image -n ${K8S_NAMESPACE} deployment/payment-service  payment-service=${DOCKER_REGISTRY}/void-payment-service:${BUILD_TAG}
+                            kubectl set image -n ${ns} deployment/gateway          gateway=${reg}/void-gateway:${tag}
+                            kubectl set image -n ${ns} deployment/user-service     user-service=${reg}/void-user-service:${tag}
+                            kubectl set image -n ${ns} deployment/product-service  product-service=${reg}/void-product-service:${tag}
+                            kubectl set image -n ${ns} deployment/cart-service     cart-service=${reg}/void-cart-service:${tag}
+                            kubectl set image -n ${ns} deployment/order-service    order-service=${reg}/void-order-service:${tag}
+                            kubectl set image -n ${ns} deployment/payment-service  payment-service=${reg}/void-payment-service:${tag}
                         """
                     } else {
-                        sh "kubectl apply -k ${K8S_MANIFESTS}/"
+                        sh "kubectl apply -k ${env.K8S_MANIFESTS}/"
                     }
                 }
             }
