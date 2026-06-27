@@ -10,8 +10,10 @@ pipeline {
         STRIPE_SECRET_KEY    = credentials('stripe-secret-key')
         STRIPE_WEBHOOK_SECRET = credentials('stripe-webhook-secret')
 
-        DOCKER_REGISTRY      = "${env.DOCKER_REGISTRY ?: ''}"
-        BUILD_TAG            = "${env.BUILD_NUMBER ?: 'latest'}"
+        DOCKER_REGISTRY       = "${env.DOCKER_REGISTRY ?: ''}"
+        DOCKER_REGISTRY_SERVER = "${env.DOCKER_REGISTRY_SERVER ?: ''}"
+        DOCKER_REGISTRY_CREDS  = credentials('docker-registry-creds')
+        BUILD_TAG             = "${env.BUILD_NUMBER ?: 'latest'}"
         K8S_NAMESPACE        = 'void-backend'
         K8S_MANIFESTS        = 'k8s'
     }
@@ -31,6 +33,23 @@ pipeline {
             post {
                 failure {
                     junit '**/test-results/**/*.xml'
+                }
+            }
+        }
+
+        stage('Login to Registry') {
+            steps {
+                script {
+                    if (!env.DOCKER_REGISTRY?.trim()) {
+                        echo 'No DOCKER_REGISTRY set — skipping login'
+                        return
+                    }
+                    def server = env.DOCKER_REGISTRY_SERVER?.trim() ?: ''
+                    sh """
+                        echo "${DOCKER_REGISTRY_CREDS_PSW}" | docker login \
+                            -u "${DOCKER_REGISTRY_CREDS_USR}" \
+                            --password-stdin ${server}
+                    """
                 }
             }
         }
@@ -142,6 +161,12 @@ pipeline {
     post {
         always {
             sh 'rm -f .env'
+            script {
+                if (env.DOCKER_REGISTRY?.trim()) {
+                    def server = env.DOCKER_REGISTRY_SERVER?.trim() ?: ''
+                    sh "docker logout ${server}"
+                }
+            }
         }
         success {
             echo 'Deployment successful! All services running in Minikube.'
