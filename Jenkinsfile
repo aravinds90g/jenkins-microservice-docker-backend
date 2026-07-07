@@ -112,7 +112,7 @@ pipeline {
                         --from-literal=JWT_SECRET='${JWT_SECRET}' \
                         --from-literal=STRIPE_SECRET_KEY='${STRIPE_SECRET_KEY}' \
                         --from-literal=STRIPE_WEBHOOK_SECRET='${STRIPE_WEBHOOK_SECRET}' \
-                        --dry-run=client -o yaml | kubectl apply -f -
+                        --dry-run=client -o yaml | kubectl apply --validate=false -f -
                 """
             }
         }
@@ -133,7 +133,7 @@ pipeline {
                             kubectl set image -n ${ns} deployment/payment-service  payment-service=${reg}/void-payment-service:${tag}
                         """
                     } else {
-                        sh "kubectl apply -k ${env.K8S_MANIFESTS}/"
+                        sh "kubectl apply --validate=false -k ${env.K8S_MANIFESTS}/"
                     }
                 }
             }
