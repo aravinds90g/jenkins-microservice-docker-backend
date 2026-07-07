@@ -11,6 +11,12 @@ pipeline {
         BUILD_TAG             = "${env.BUILD_NUMBER ?: 'latest'}"
         K8S_NAMESPACE        = 'void-backend'
         K8S_MANIFESTS        = 'k8s'
+
+        // Reach the minikube API directly — bypass any HTTP proxy (a proxied
+        // request returns an HTML error page, which kubectl can't parse).
+        KUBECONFIG           = '/home/aravinds90g/.kube/config'
+        NO_PROXY             = '192.168.49.2,localhost,127.0.0.1,.svc,.cluster.local'
+        no_proxy             = '192.168.49.2,localhost,127.0.0.1,.svc,.cluster.local'
     }
 
     stages {
