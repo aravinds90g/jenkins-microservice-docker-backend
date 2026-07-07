@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs 'node20'
-    }
-
     environment {
         JWT_SECRET           = credentials('jwt-secret')
         STRIPE_SECRET_KEY    = credentials('stripe-secret-key')
@@ -12,7 +8,6 @@ pipeline {
 
         DOCKER_REGISTRY       = "${env.DOCKER_REGISTRY ?: ''}"
         DOCKER_REGISTRY_SERVER = "${env.DOCKER_REGISTRY_SERVER ?: ''}"
-        DOCKER_REGISTRY_CREDS  = credentials('docker-registry-creds')
         BUILD_TAG             = "${env.BUILD_NUMBER ?: 'latest'}"
         K8S_NAMESPACE        = 'void-backend'
         K8S_MANIFESTS        = 'k8s'
